@@ -97,14 +97,6 @@ client.on('message', message => {
   const poll = message.content.slice(prefix.length).trim().split(/;+/g);
   const command = args.shift().toLowerCase();
 
-  if (command === 'eval') {
-    try {
-      message.channel.send(`//Success ✅\n${eval(args.join(' '))}`, {code: 'js', split: '\n'});
-    } catch (err) {
-      message.channel.send(`//Error ❎\n${err}`, {code: 'js'});
-    }
-  };
-
   if (command === 'help') {
     const embed = new Discord.MessageEmbed()
     .setTitle('Небольшая инструкция по боту Aristotle')
