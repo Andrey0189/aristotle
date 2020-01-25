@@ -34,6 +34,7 @@ emoji = (id) => client.emojis.get(id);
 client.on('ready', () => console.log('Bot is ready'));
 
 client.on('messageReactionAdd', async (reaction, user) => {
+  const extended = reaction.message.channel.name.match(/extended/);
   if (!reaction.message.guild || user.bot) return;
 
   if (reaction.message.partial) {
@@ -44,18 +45,21 @@ client.on('messageReactionAdd', async (reaction, user) => {
 		};
   };
 
-  if (user.id === reaction.message.author.id && reaction.message.channel.id === channels.extended) {
+  if (user.id === reaction.message.author.id && extended) {
     reaction.users.remove(user);
     user.send('Ты не можешь голосовать за свои же варианты в расширенных опросах');
   }
 
-  if (reaction.message.channel.id === channels.extended && reaction.emoji.name === '⭐' && reaction.message.guild.members.get(user.id).roles.has(roles.admin)) {
+  if (extended && reaction.emoji.name === '⭐' && reaction.message.guild.members.get(user.id).roles.has(roles.admin)) {
     user.send(`В расширенный опрос добавлен новый вариант:\nАвтор варианта: ${reaction.message.author.tag}. Вариант: ${reaction.message.content}`);
   };
 
   if (reaction.message.channel.id === channels.unofficial) {
     if (reaction.emoji.name === '⭐' && reaction.message.guild.members.get(user.id).roles.has(roles.admin)) {
-      client.channels.get(channels.official).send(reaction.message, {embed: reaction.message.embeds[0].setTitle(`${reaction.message.embeds[0].title}. Опрос попал сюда из канала #unofficial-votes`)});
+      const msg = await client.channels.get(channels.official).send(reaction.message, {embed: reaction.message.embeds[0].setTitle(`${reaction.message.embeds[0].title}. Опрос попал сюда из канала #unofficial-votes`)});
+      reaction.message.reactions.forEach(r => {
+        if (r.emoji.name !== 'star') msg.react(r.emoji.name);
+      });
     };
   };
 
@@ -67,14 +71,14 @@ client.on('messageReactionAdd', async (reaction, user) => {
       reaction.users.remove(user);
     };
 
-    if (reaction.message.embeds[0].title.match(/Без мультичойс/i)); {
+    if (reaction.message.embeds[0].title === 'Без мультичойс') {
       let count = 0;
       reaction.message.reactions.forEach(async r => {
         const users = await r.users.fetch();
         if (users.find(u => u.id === user.id)) count++;
         if (count > 1) {
-          await user.send('Ты не можешь голосовать за несколько вариантов в опросе без опции "Мультичойс"');
-          return reaction.users.remove(user);
+          await reaction.users.remove(user);
+          return user.send('Ты не можешь голосовать за несколько вариантов в опросе без опции "Мультичойс"');
         };
       });
     };
@@ -83,7 +87,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
 client.on('message', message => {
   if (!message.guild || message.author.bot) return;
-  if (message.channel.id === channels.extended) multipleReact(message, [emoji(emojis.yes), emoji(emojis.no)]);
+  if (message.channel.name.match(/extended/)) multipleReact(message, [emoji(emojis.yes), emoji(emojis.no)]);
 
   const prefix = prefixes.find(p => message.content.toLowerCase().startsWith(p));
   if (message.channel.id === channels.unofficial && !prefix) {
